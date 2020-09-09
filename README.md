@@ -30,7 +30,20 @@ plexPort
 plexHost
 sectionsToProcess
 
-
+`{
+  "plexUser": "plexuser@gmail.com",
+  "plexPass": "pl3xp455w0rd!",
+  "plexProtocol": "https",
+  "plexPort": 443,
+  "plexHost": "martin.plexsupermegafuninstall.org",
+  "preferredAgent": "plex://movie",
+  "sectionsToProcess": [
+    1,
+    6,
+    9
+  ]
+}
+`
 # Agent Fix
 `dotnet ./MonkFixPlexDB.dll --agentfix --verbose`
 
