@@ -351,8 +351,6 @@ namespace MonkFixPlexDB
                                         WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                         doPlexMovieMatchItem(i.RatingKey.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                         System.Threading.Thread.Sleep(1000);
-                                        WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.RatingKey.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
-
                                     }
                                 }
 
@@ -423,7 +421,6 @@ namespace MonkFixPlexDB
                                                         WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                                         doPlexMovieMatchItem(i.RatingKey.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                                         System.Threading.Thread.Sleep(1000);
-                                                        WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.RatingKey.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                                                     }
                                                 }
@@ -1187,7 +1184,6 @@ namespace MonkFixPlexDB
                                             WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                             doPlexMovieMatchItem(i.id.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                             System.Threading.Thread.Sleep(1000);
-                                            WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.id.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                                         }
                                     }
@@ -1246,7 +1242,6 @@ namespace MonkFixPlexDB
                         doPlexRefreshMetadataById(i.id.ToString());
                         System.Threading.Thread.Sleep(500);
 
-                       WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.id.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                     }
                     catch (Exception ex)
@@ -2292,37 +2287,6 @@ namespace MonkFixPlexDB
 
         }
 
-        public static async void addToPlexAutoScanQueue(string path)
-        {
-            var handler = new HttpClientHandler();
-
-            // If you are using .NET Core 3.0+ you can replace `~DecompressionMethods.None` to `DecompressionMethods.All`
-            handler.AutomaticDecompression = ~DecompressionMethods.None;
-
-            using (var httpClient = new HttpClient(handler))
-            {
-                using (var request = new HttpRequestMessage(new HttpMethod("POST"), ""))
-                {
-                    request.Headers.TryAddWithoutValidation("authority", "plexautoscan.zenjabba.com");
-                    request.Headers.TryAddWithoutValidation("cache-control", "max-age=0");
-                    request.Headers.TryAddWithoutValidation("upgrade-insecure-requests", "1");
-                    request.Headers.TryAddWithoutValidation("origin", "https://plexautoscan.zenjabba.com");
-                    request.Headers.TryAddWithoutValidation("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36");
-                    request.Headers.TryAddWithoutValidation("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-                    request.Headers.TryAddWithoutValidation("sec-fetch-site", "same-origin");
-                    request.Headers.TryAddWithoutValidation("sec-fetch-mode", "navigate");
-                    request.Headers.TryAddWithoutValidation("sec-fetch-user", "?1");
-                    request.Headers.TryAddWithoutValidation("sec-fetch-dest", "document");
-                    request.Headers.TryAddWithoutValidation("referer", "https://plexautoscan.zenjabba.com/a6db7a48bb1b4d23b4ff2654ef611699");
-                    request.Headers.TryAddWithoutValidation("accept-language", "en-US,en;q=0.9");
-                    request.Headers.TryAddWithoutValidation("cookie", "_ga=GA1.2.10313295.1580341610");
-
-                    request.Content = new StringContent("filepath=%2Fdata%2Fmovies%2FMurder+to+Mercy+The+Cyntoia+Brown+Story+%282020%29+WEBDL-1080p.mkv&eventType=Manual");
-                    request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/x-www-form-urlencoded");
-
-                    var response = await httpClient.SendAsync(request);
-                }
-            }
-        }
+        
     }
 }
