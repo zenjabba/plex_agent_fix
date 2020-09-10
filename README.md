@@ -2,7 +2,9 @@
 
 # Linux Install
 
-Clone Repo
+Grab the 1.1 release of the binaries
+ 
+`https://github.com/zenjabba/plex_agent_fix/releases/download/1.1/plex_agent_fix-release.zip`
 
 `wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb`
 
@@ -45,7 +47,7 @@ sectionsToProcess
 }
 `
 # Agent Fix
-`dotnet ./MonkFixPlexDB.dll --agentfix --verbose`
+`dotnet ./plex_agent_fix.dll --agentfix --verbose`
 
 # Remove Unavailable Files
-`dotnet ./MonkFixPlexDB.dll --remove --verbose`
+`dotnet ./plex_agent_fix.dll --remove --verbose`
