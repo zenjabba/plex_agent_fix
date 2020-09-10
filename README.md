@@ -6,6 +6,8 @@ Grab the 1.1 release of the binaries
  
 `https://github.com/zenjabba/plex_agent_fix/releases/download/1.1/plex_agent_fix-release.zip`
 
+Unzip the binaries
+
 `wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb`
 
 `sudo dpkg -i packages-microsoft-prod.deb`
