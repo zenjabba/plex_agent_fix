@@ -2,9 +2,9 @@
 
 # Linux Install
 
-Grab the 1.1 release of the binaries
+Grab the 1.2 release of the binaries
  
-`https://github.com/zenjabba/plex_agent_fix/releases/download/1.1/plex_agent_fix-1.1-release.zip`
+`https://github.com/zenjabba/plex_agent_fix/releases/download/1.2/plex_agent_fix-1.2-release.zip`
 
 Unzip the binaries
 
