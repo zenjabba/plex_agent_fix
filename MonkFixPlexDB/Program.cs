@@ -51,10 +51,8 @@ namespace MonkFixPlexDB
             };
 
 
-            Test();
-        
-
-           
+            //Test();
+       
             
 
             Parser.Default.ParseArguments<Options>(args)
