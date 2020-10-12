@@ -45,6 +45,19 @@ sectionsToProcess
     1,
     6,
     9
+  ],
+  "episodeSectionsToProcess": [
+    3
+  ],
+  "sectionProgress": [
+    {
+      "sectionId": 3,
+      "lastKey": 0
+    },
+    {
+      "sectionId": 1,
+      "lastKey": 0
+    }
   ]
 }
 `

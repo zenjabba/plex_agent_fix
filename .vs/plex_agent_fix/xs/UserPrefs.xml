@@ -1,15 +1,15 @@
 ﻿<Properties StartupConfiguration="{13324E53-7E7A-4BD7-9C94-CCA0E6015658}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="MonkFixPlexDB/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="MonkFixPlexDB/config.json">
     <Files>
-      <File FileName="MonkFixPlexDB/PlexLibrary.cs" Line="366" Column="1" />
-      <File FileName="MonkFixPlexDB/Program.cs" Line="407" Column="1" />
+      <File FileName="MonkFixPlexDB/Program.cs" Line="2618" Column="1" />
+      <File FileName="MonkFixPlexDB/config.json" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="plex_agent_fix" expanded="True">
             <Node name="plex_agent_fix" expanded="True">
-              <Node name="Program.cs" selected="True" />
+              <Node name="config.json" selected="True" />
             </Node>
           </Node>
         </State>
