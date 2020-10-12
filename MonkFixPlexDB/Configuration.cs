@@ -51,8 +51,22 @@
         [JsonProperty("sectionsToProcess", NullValueHandling = NullValueHandling.Ignore)]
         public List<long> SectionsToProcess { get; set; }
 
+        [JsonProperty("episodeSectionsToProcess", NullValueHandling = NullValueHandling.Ignore)]
+        public List<long> EpisodeSectionsToProcess { get; set; }
+
         [JsonProperty("mediaTypes", NullValueHandling = NullValueHandling.Ignore)]
         public List<string> MediaTypes { get; set; }
+
+        [JsonProperty("sectionProgress", NullValueHandling = NullValueHandling.Ignore)]
+        public List<SectionProgress> SectionProgress { get; set; }
+
+    }
+
+
+    public class SectionProgress
+    {
+        public int sectionId { get; set; }
+        public int lastKey { get; set; }
     }
 
     public partial class MediaPath
