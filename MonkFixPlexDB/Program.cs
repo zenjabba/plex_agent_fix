@@ -51,7 +51,7 @@ namespace MonkFixPlexDB
             };
 
 
-            //Test();
+            Test();
         
 
            
@@ -176,6 +176,11 @@ namespace MonkFixPlexDB
                                        deleteFromSection(s);
 
                                    }
+                                   foreach (var s in configuration.EpisodeSectionsToProcess)
+                                   {
+                                       deleteFromSection(s, "4");
+
+                                   }
                                }
                                else
                                {
@@ -205,12 +210,27 @@ namespace MonkFixPlexDB
         }
 
 
-        public static void deleteFromSection(long s)
+        public static void deleteFromSection(long s, string contentType ="1")
         {
 
             WriteLog("Initialization of Plex Section " + s);
 
-            var plexLibrary = doPlexGetLibraryEntries(s.ToString(), 0).Result;
+            var c = configuration;
+            var sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            var startingPoint = 0;
+
+            if(sectionProgress != null)
+            {
+                if(sectionProgress.lastKey > 0)
+                {
+                    startingPoint = sectionProgress.lastKey;
+                }
+            }
+
+            WriteLog("Starting Point for Plex Section " + s + " Set To Item: " + startingPoint);
+
+            var plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, startingPoint).Result;
 
             foreach (var i in plexLibrary.MediaContainer.Metadata)
             {
@@ -225,13 +245,31 @@ namespace MonkFixPlexDB
                         {
                             foreach (var mm in m.Media)
                             {
-                                foreach (var p in mm.Part)
+                                if (mm.Part.Count > 1)
                                 {
-                                    if (p.Exists  == false)
+                                    foreach (var p in mm.Part)
                                     {
-                                        doPlexDeleteItem(i.RatingKey.ToString(), p.Id.ToString());
+                                        if (p.Exists == false)
+                                        {
+                                            doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
 
-                                        WriteLog(p.File.ToString() + " is unavailable and would be deleted");
+                                            WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+
+                                            System.Threading.Thread.Sleep(200);
+
+                                            doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
+
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    var p = mm.Part.FirstOrDefault();
+
+                                    if (string.IsNullOrEmpty(p.File.ToString())){
+                                        WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
+
                                     }
                                 }
                             }
@@ -247,18 +285,30 @@ namespace MonkFixPlexDB
             if (plexLibrary != null)
             {
 
+                sectionProgress.lastKey = startingPoint + 100;
+
+                foreach (var p in configuration.SectionProgress)
+                {
+                    if (p.sectionId == sectionProgress.sectionId)
+                    {
+                        p.lastKey = sectionProgress.lastKey;
+                        WriteConfiguration();
+
+                    }
+                }
+
                 var howMany = (plexLibrary.MediaContainer.TotalSize / 100) + 100;
 
                 var totalSize = plexLibrary.MediaContainer.TotalSize + 100;
                 WriteLog("Your Plex Section " + s + " has " + totalSize + " items.");
 
-                for (int x = 100; x < totalSize; x += 100)
+                for (int x = startingPoint + 100; x < totalSize; x += 100)
                 {
 
                     try
                     {
                         WriteLog("Getting " + x + " of " + totalSize + " items from Plex Section " + s);
-                        plexLibrary = doPlexGetLibraryEntries(s.ToString(), x).Result;
+                        plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, x).Result;
 
                     }
                     catch(Exception plexLibEx)
@@ -283,13 +333,32 @@ namespace MonkFixPlexDB
                                         {
                                             foreach (var mm in m.Media)
                                             {
-                                                foreach (var p in mm.Part)
+                                                if (mm.Part.Count > 1)
                                                 {
-                                                    if (p.Exists == false)
+                                                    foreach (var p in mm.Part)
                                                     {
-                                                        doPlexDeleteItem(i.RatingKey.ToString(), p.Id.ToString());
+                                                        if (p.Exists == false)
+                                                        {
+                                                            doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
 
-                                                        WriteLog(p.File.ToString() + " is unavailable and would be deleted");
+                                                            WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+
+                                                            System.Threading.Thread.Sleep(200);
+
+                                                            doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
+
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    var p = mm.Part.FirstOrDefault();
+
+                                                    if (string.IsNullOrEmpty(p.File.ToString()))
+                                                    {
+                                                        WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
+
                                                     }
                                                 }
                                             }
@@ -308,6 +377,27 @@ namespace MonkFixPlexDB
                         }
 
                     }
+
+                    sectionProgress.lastKey = x;
+
+                    foreach (var p in configuration.SectionProgress)
+                    {
+                        if (p.sectionId == sectionProgress.sectionId)
+                        {
+                            p.lastKey = sectionProgress.lastKey;
+                            WriteConfiguration();
+
+                        }
+                    }
+
+
+                    System.Threading.Thread.Sleep(100);
+
+                    if (configuration.Timeout > 0)
+                    {
+                        System.Threading.Thread.Sleep(configuration.Timeout);
+
+                    }
                 }
 
             }
@@ -317,7 +407,26 @@ namespace MonkFixPlexDB
         public static void fixAgentBySection(long s)
         {
 
-            var plexLibrary = doPlexGetLibraryEntries(s.ToString(), 0).Result;
+            var sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            var startingPoint = 0;
+
+            if (sectionProgress != null)
+            {
+                if (sectionProgress.lastKey > 0)
+                {
+                    startingPoint = sectionProgress.lastKey;
+                }
+            }
+            else
+            {
+                sectionProgress = new SectionProgress() { sectionId = (int)s, lastKey = 0 };
+                configuration.SectionProgress.Add(sectionProgress);
+            }
+
+            WriteLog("Starting Point for Plex Section " + s + " Set To Item: " + startingPoint);
+
+            var plexLibrary = doPlexGetLibraryEntries(s.ToString(), startingPoint).Result;
 
             WriteLog("Initialization of Plex Section " + s);
 
@@ -351,6 +460,9 @@ namespace MonkFixPlexDB
                                         WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                         doPlexMovieMatchItem(i.RatingKey.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                         System.Threading.Thread.Sleep(1000);
+                                        
+                                        WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.RatingKey.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
+
                                     }
                                 }
 
@@ -368,12 +480,26 @@ namespace MonkFixPlexDB
             if (plexLibrary != null)
             {
 
+                sectionProgress.lastKey = startingPoint + 100;
+
+                foreach(var p in configuration.SectionProgress)
+                {
+                    if(p.sectionId == sectionProgress.sectionId)
+                    {
+                        p.lastKey = sectionProgress.lastKey;
+                        WriteConfiguration();
+
+                    }
+                }
+
+
+
                 var howMany = (plexLibrary.MediaContainer.TotalSize / 100) + 100;
 
                 var totalSize = plexLibrary.MediaContainer.TotalSize + 100;
                 WriteLog("Your Plex Section " + s + " has " + totalSize + " items.");
 
-                for (int x = 100; x < totalSize; x += 100)
+                for (int x = startingPoint + 100; x < totalSize; x += 100)
                 {
 
                     try
@@ -421,6 +547,7 @@ namespace MonkFixPlexDB
                                                         WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                                         doPlexMovieMatchItem(i.RatingKey.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                                         System.Threading.Thread.Sleep(1000);
+                                                        WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.RatingKey.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                                                     }
                                                 }
@@ -440,6 +567,26 @@ namespace MonkFixPlexDB
 
                         }
                     }
+                    sectionProgress.lastKey = x;
+
+                    foreach (var p in configuration.SectionProgress)
+                    {
+                        if (p.sectionId == sectionProgress.sectionId)
+                        {
+                            p.lastKey = sectionProgress.lastKey;
+                            WriteConfiguration();
+
+                        }
+                    }
+
+
+                    System.Threading.Thread.Sleep(100);
+
+                    if (configuration.Timeout > 0)
+                    {
+                        System.Threading.Thread.Sleep(configuration.Timeout);
+
+                    }
                 }
 
             }
@@ -451,7 +598,7 @@ namespace MonkFixPlexDB
             Verbose = true;
             configuration = GetConfiguration();
 
-            
+            /*
             DBPath = configuration.PlexDatabasePath;
             try
             {
@@ -461,7 +608,7 @@ namespace MonkFixPlexDB
             catch (Exception ex)
             {
 
-            }
+            }*/
             
             /*
             ScanDirectoryForPlexFiles("/Users/martinbowling/downloads/plex-test/");
@@ -475,9 +622,9 @@ namespace MonkFixPlexDB
             {
                 if (!string.IsNullOrEmpty(plexUser.User.AuthToken))
                 {
-                    foreach (var s in configuration.SectionsToProcess)
+                    foreach (var s in configuration.EpisodeSectionsToProcess)
                     {
-                        deleteFromSection(s);
+                        deleteFromSection(s, "4");
 
                     }
                 }
@@ -1184,6 +1331,7 @@ namespace MonkFixPlexDB
                                             WriteLog("Using " + bestMatch.Guid + " to match " + bestMatch.Name + " " + bestMatch.Year.ToString());
                                             doPlexMovieMatchItem(i.id.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                             System.Threading.Thread.Sleep(1000);
+                                            WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.id.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                                         }
                                     }
@@ -1242,6 +1390,7 @@ namespace MonkFixPlexDB
                         doPlexRefreshMetadataById(i.id.ToString());
                         System.Threading.Thread.Sleep(500);
 
+                       WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.id.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                     }
                     catch (Exception ex)
@@ -1637,6 +1786,56 @@ namespace MonkFixPlexDB
             }
         }
 
+        private static async Task<PlexLibrary> doPlexGetLibraryEntries(string libraryId, string contentType, int startingNumber)
+        {
+
+            handler = new HttpClientHandler
+            {
+                CookieContainer = cookieJar,
+                UseCookies = true,
+                UseDefaultCredentials = false
+            };
+
+
+            // If you are using .NET Core 3.0+ you can replace `~DecompressionMethods.None` to `DecompressionMethods.All`
+            handler.AutomaticDecompression = ~DecompressionMethods.None;
+
+            try
+            {
+                using (var httpClient = new HttpClient(handler))
+                {
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/sections/" + libraryId + "/all?type=" + contentType +"&sort=addedAt%3Adesc&includeCollections=1&includeExternalMedia=1&includeAdvanced=1&includeMeta=1&X-Plex-Container-Start=" + startingNumber.ToString() + "&X-Plex-Container-Size=72&X-Plex-Product=Plex Web&X-Plex-Version=4.41.1&X-Plex-Client-Identifier=kfowlv9lv8su6i8ds01fbqdm&X-Plex-Platform=Chrome&X-Plex-Platform-Version=84.0&X-Plex-Sync-Version=2&X-Plex-Features=external-media%2Cindirect-media&X-Plex-Model=hosted&X-Plex-Device=OSX&X-Plex-Device-Name=Chrome&X-Plex-Device-Screen-Resolution=1792x881%2C1792x1120&X-Plex-Token=" + plexUser.User.AuthToken + "&X-Plex-Language=en&X-Plex-Drm=none&X-Plex-Text-Format=plain&X-Plex-Provider-Version=1.3"))
+                    {
+                        request.Headers.TryAddWithoutValidation("authority", configuration.PlexHost);
+                        request.Headers.TryAddWithoutValidation("accept", "application/json");
+                        request.Headers.TryAddWithoutValidation("accept-language", "en");
+                        request.Headers.TryAddWithoutValidation("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36");
+                        request.Headers.TryAddWithoutValidation("origin", "http://app.plex.tv");
+                        request.Headers.TryAddWithoutValidation("sec-fetch-site", "cross-site");
+                        request.Headers.TryAddWithoutValidation("sec-fetch-mode", "cors");
+                        request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
+                        request.Headers.TryAddWithoutValidation("referer", "http://app.plex.tv/");
+
+                        var response = httpClient.SendAsync(request).Result;
+
+                        var json = response.Content.ReadAsStringAsync().Result.ToString();
+                        //WriteLog(json);
+
+                        var mc = Newtonsoft.Json.JsonConvert.DeserializeObject<PlexLibrary>(json);
+
+                        return mc;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex.Message.ToString() + ex.InnerException.ToString() + ex.Source.ToString());
+
+                return null;
+
+            }
+        }
+
 
         private static async Task doPlexRefreshMetadata(string metadataItemId)
         {
@@ -1682,6 +1881,47 @@ namespace MonkFixPlexDB
 
                 }
             }
+
+        }
+
+        private static async Task doPlexMetadataDeleteUnavailableFiles(string metadataItemId)
+        {
+
+            handler = new HttpClientHandler
+            {
+                CookieContainer = cookieJar,
+                UseCookies = true,
+                UseDefaultCredentials = false
+            };
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(configuration.PlexUser + ":" + configuration.PlexPass);
+            string auth = System.Convert.ToBase64String(plainTextBytes);
+
+            //WriteLog(configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/refresh?X-Plex-Token=" + plexUser.User.AuthToken + "");
+
+
+
+            using (var httpClient = new HttpClient(handler))
+            {
+                using (var request = new HttpRequestMessage(new HttpMethod("GET"), configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/refresh?includeExternalMedia=1&checkFiles=1&asyncCheckFiles=0&skipRefresh=1&X-Plex-Token=" + plexUser.User.AuthToken))
+                {
+                    request.Headers.TryAddWithoutValidation("accept", "/");
+                    request.Headers.TryAddWithoutValidation("X-Plex-Token", plexUser.User.AuthToken);
+
+                    request.Headers.TryAddWithoutValidation("Authorization", "Basic " + auth);
+                    request.Headers.TryAddWithoutValidation("access-control-request-method", "PUT");
+                    request.Headers.TryAddWithoutValidation("origin", "http://app.plex.tv");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-mode", "cors");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-site", "cross-site");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
+                    request.Headers.TryAddWithoutValidation("referer", "http://app.plex.tv/");
+                    request.Headers.TryAddWithoutValidation("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36");
+                    request.Headers.TryAddWithoutValidation("accept-language", "en-US,en;q=0.9");
+
+                    var response = httpClient.SendAsync(request).Result;
+                }
+            }
+
+
 
         }
 
@@ -1974,7 +2214,7 @@ namespace MonkFixPlexDB
             }
         }
 
-        private static async Task doPlexDeleteItem(string metadataItemId, string mediaPartId)
+        private static async Task doPlexDeleteItem(string metadataItemId, string mediaPartId, string urlPart = "")
         {
 
             
@@ -1987,18 +2227,50 @@ namespace MonkFixPlexDB
 
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(configuration.PlexUser + ":" + configuration.PlexPass);
                 string auth = System.Convert.ToBase64String(plainTextBytes);
-                using (var httpClient = new HttpClient(handler))
+
+            var url = string.Empty;
+            if (string.IsNullOrEmpty(urlPart))
+                url = configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/media/" + mediaPartId + "?X-Plex-Token=" + plexUser.User.AuthToken + "";
+            else
+                url = configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + urlPart + "?X-Plex-Token=" + plexUser.User.AuthToken + "";
+
+
+
+            using (var httpClient = new HttpClient(handler))
+            {
+                using (var request = new HttpRequestMessage(new HttpMethod("OPTIONS"), url))
                 {
-                //using (var request = new HttpRequestMessage(new HttpMethod("DELETE"), "https://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId))
+                    try {
+
+                        request.Headers.TryAddWithoutValidation("Connection", "keep-alive");
+                        request.Headers.TryAddWithoutValidation("Accept", "*/*");
 
 
-                //2135462/1511740978
-                //WriteLog(configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/media/" + mediaPartId + "?X-Plex-Token=" + plexUser.User.AuthToken + "");
 
-                    // /library/metadata/11/media/15?
-                   // using (var request = new HttpRequestMessage(new HttpMethod("DELETE"), configuration.PlexProtocol + "://" + configuration.PlexHost + "/library/metadata/" + metadataItemId + "/media/" + mediaPartId + "?includeExternalMedia=1&X-Plex-Product=Plex Web&X-Plex-Version=4.8.4&X-Plex-Client-Identifier=0aftwia9s9lrzb9za31c9hj0&X-Plex-Platform=Chrome&X-Plex-Platform-Version=81.0&X-Plex-Sync-Version=2&X-Plex-Features=external-media&X-Plex-Model=bundled&X-Plex-Device=OSX&X-Plex-Device-Name=Chrome&X-Plex-Device-Screen-Resolution=1592x1091%2C2560x1440&X-Plex-Token="+ plexUser.User.AuthToken +"&X-Plex-Language=en&X-Plex-Text-Format=plain&X-Plex-Provider-Version=1.3"))
+                        request.Headers.TryAddWithoutValidation("X-Plex-Token", plexUser.User.AuthToken);
+                        request.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "DELETE");
+                        request.Headers.TryAddWithoutValidation("Origin", "https://app.plex.tv");
+                        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+                        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "cross-site");
+                        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+                        request.Headers.TryAddWithoutValidation("Referer", "https://app.plex.tv/");
+                        request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36");
+                        request.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
 
-                    using (var request = new HttpRequestMessage(new HttpMethod("DELETE"), configuration.PlexProtocol + "://" + configuration.PlexHost+ ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId +"/media/" + mediaPartId + "?X-Plex-Token=" + plexUser.User.AuthToken +""))
+                        var response = await httpClient.SendAsync(request);
+                    }
+                   
+                    catch (Exception ex)
+                    {
+                        WriteLog(ex.Message.ToString() + ex.InnerException.ToString() + ex.Source.ToString());
+                    }
+                }
+            }
+            using (var httpClient = new HttpClient(handler))
+                {
+                
+
+                using (var request = new HttpRequestMessage(new HttpMethod("DELETE"), url))
 
                     {
                         try
@@ -2268,6 +2540,28 @@ namespace MonkFixPlexDB
             }
         }
 
+
+
+        public static void WriteConfiguration(bool silent = true)
+        {
+            try
+            {
+                if(!silent)
+                    WriteLog("Serializing Settings");
+
+                var configJson = Newtonsoft.Json.JsonConvert.SerializeObject(configuration);
+
+                if(!silent)
+                    WriteLog("Writing Settings To " + configFile);
+
+                File.WriteAllText(configFile, configJson);
+            }
+            catch (Exception ex)
+            {
+                WriteLog("Failed To Write Config File. " + ex.Message.ToString());
+            }
+        }
+
         public static Configuration GetConfiguration()
         {
 
@@ -2287,6 +2581,37 @@ namespace MonkFixPlexDB
 
         }
 
-        
+        public static async void addToPlexAutoScanQueue(string path)
+        {
+            var handler = new HttpClientHandler();
+
+            // If you are using .NET Core 3.0+ you can replace `~DecompressionMethods.None` to `DecompressionMethods.All`
+            handler.AutomaticDecompression = ~DecompressionMethods.None;
+
+            using (var httpClient = new HttpClient(handler))
+            {
+                using (var request = new HttpRequestMessage(new HttpMethod("POST"), ""))
+                {
+                    request.Headers.TryAddWithoutValidation("authority", "plexautoscan.zenjabba.com");
+                    request.Headers.TryAddWithoutValidation("cache-control", "max-age=0");
+                    request.Headers.TryAddWithoutValidation("upgrade-insecure-requests", "1");
+                    request.Headers.TryAddWithoutValidation("origin", "https://plexautoscan.zenjabba.com");
+                    request.Headers.TryAddWithoutValidation("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36");
+                    request.Headers.TryAddWithoutValidation("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-site", "same-origin");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-mode", "navigate");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-user", "?1");
+                    request.Headers.TryAddWithoutValidation("sec-fetch-dest", "document");
+                    request.Headers.TryAddWithoutValidation("referer", "https://plexautoscan.zenjabba.com/a6db7a48bb1b4d23b4ff2654ef611699");
+                    request.Headers.TryAddWithoutValidation("accept-language", "en-US,en;q=0.9");
+                    request.Headers.TryAddWithoutValidation("cookie", "_ga=GA1.2.10313295.1580341610");
+
+                    request.Content = new StringContent("filepath=%2Fdata%2Fmovies%2FMurder+to+Mercy+The+Cyntoia+Brown+Story+%282020%29+WEBDL-1080p.mkv&eventType=Manual");
+                    request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/x-www-form-urlencoded");
+
+                    var response = await httpClient.SendAsync(request);
+                }
+            }
+        }
     }
 }

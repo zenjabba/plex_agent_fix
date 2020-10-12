@@ -404,7 +404,7 @@ namespace MonkFixPlexDB
 
     public enum VideoResolutionEnum { Sd };
 
-    public enum ViewGroup { Movie };
+    public enum ViewGroup { Movie, Show, Season, Episode };
 
     public partial struct VideoResolutionUnion
     {
@@ -1084,6 +1084,17 @@ namespace MonkFixPlexDB
             if (value == "movie")
             {
                 return ViewGroup.Movie;
+            }else if (value == "show")
+            {
+                return ViewGroup.Show;
+            }
+            else if (value == "season")
+            {
+                return ViewGroup.Season;
+            }
+            else if (value == "episode")
+            {
+                return ViewGroup.Episode;
             }
             throw new Exception("Cannot unmarshal type ViewGroup");
         }
