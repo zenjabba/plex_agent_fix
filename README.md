@@ -4,7 +4,7 @@
 
 Grab the 0.4 release of the binaries
  
-`https://github.com/zenjabba/plex_agent_fix/releases/download/0.4/plex_agent_fix-0.4-release.zip`
+`https://github.com/zenjabba/plex_agent_fix/releases/download/0.5/plex_agent_fix-0.5-release.zip`
 
 Unzip the binaries
 
