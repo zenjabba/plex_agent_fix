@@ -26,6 +26,11 @@
     6,
     9
   ],
+  "episodeSectionsToProcess": [
+    1,
+    6,
+    9
+  ],
   "mediaTypes": [
     ".webm",
     ".mkv",

@@ -216,7 +216,17 @@ namespace MonkFixPlexDB
             WriteLog("Initialization of Plex Section " + s);
 
             var c = configuration;
-            var sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            SectionProgress sectionProgress = null;
+            try
+            {
+                sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            }
+            catch(Exception ex)
+            {
+
+            }
 
             var startingPoint = 0;
 
@@ -407,7 +417,17 @@ namespace MonkFixPlexDB
         public static void fixAgentBySection(long s)
         {
 
-            var sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            SectionProgress sectionProgress = null;
+            try
+            {
+                sectionProgress = configuration.SectionProgress.Where(x => x.sectionId == s).FirstOrDefault();
+
+            }
+            catch (Exception ex)
+            {
+
+            }
 
             var startingPoint = 0;
 
@@ -622,6 +642,11 @@ namespace MonkFixPlexDB
             {
                 if (!string.IsNullOrEmpty(plexUser.User.AuthToken))
                 {
+                    foreach (var s in configuration.SectionsToProcess)
+                    {
+                        deleteFromSection(s);
+
+                    }
                     foreach (var s in configuration.EpisodeSectionsToProcess)
                     {
                         deleteFromSection(s, "4");
