@@ -170,14 +170,28 @@ namespace MonkFixPlexDB
                            {
                                if (!string.IsNullOrEmpty(plexUser.User.AuthToken))
                                {
-                                   foreach (var s in configuration.SectionsToProcess)
+                                   try
                                    {
-                                       deleteFromSection(s);
+                                       foreach (var s in configuration.SectionsToProcess)
+                                       {
+                                           deleteFromSection(s);
+
+                                       }
+                                   }
+                                   catch(Exception ex)
+                                   {
 
                                    }
-                                   foreach (var s in configuration.EpisodeSectionsToProcess)
+                                   try
                                    {
-                                       deleteFromSection(s, "4");
+                                       foreach (var s in configuration.EpisodeSectionsToProcess)
+                                       {
+                                           deleteFromSection(s, "4");
+
+                                       }
+                                   }
+                                   catch(Exception ex)
+                                   {
 
                                    }
                                }
@@ -257,56 +271,76 @@ namespace MonkFixPlexDB
 
             var plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, startingPoint).Result;
 
-            foreach (var i in plexLibrary.MediaContainer.Metadata)
+            if(plexLibrary != null)
             {
 
-                try
+                if (startingPoint >= plexLibrary.MediaContainer.TotalSize)
                 {
-                    var mc = getPlexMediaContainer(i.RatingKey.ToString()).Result;
+                    goto configuration_timeout;
+                }
+            }
+            else
+            {
+                goto configuration_timeout;
 
-                    if (mc != null)
+            }
+
+            try
+            {
+                foreach (var i in plexLibrary.MediaContainer.Metadata)
+                {
+
+                    try
                     {
-                        foreach (var m in mc.MediaContainer.Metadata)
+                        var mc = getPlexMediaContainer(i.RatingKey.ToString()).Result;
+
+                        if (mc != null)
                         {
-                            foreach (var mm in m.Media)
+                            foreach (var m in mc.MediaContainer.Metadata)
                             {
-                                if (mm.Part.Count > 1)
+                                foreach (var mm in m.Media)
                                 {
-                                    foreach (var p in mm.Part)
+                                    if (mm.Part.Count > 1)
                                     {
-                                        if (p.Exists == false)
+                                        foreach (var p in mm.Part)
                                         {
-                                            doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+                                            if (p.Exists == false)
+                                            {
+                                                doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
 
-                                            WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+                                                WriteLog(p.File.ToString() + " is unavailable and has been deleted");
 
-                                            System.Threading.Thread.Sleep(200);
+                                                System.Threading.Thread.Sleep(200);
 
-                                            doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+                                                doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
 
+
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var p = mm.Part.FirstOrDefault();
+
+                                        if (string.IsNullOrEmpty(p.File.ToString()))
+                                        {
+                                            WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
 
                                         }
                                     }
                                 }
-                                else
-                                {
-                                    var p = mm.Part.FirstOrDefault();
-
-                                    if (string.IsNullOrEmpty(p.File.ToString()))
-                                    {
-                                        WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
-
-                                    }
-                                }
                             }
+
                         }
+                    }
+                    catch (Exception ex)
+                    {
 
                     }
                 }
-                catch (Exception ex)
-                {
+            }catch(Exception metadataEx)
+            {
 
-                }
             }
 
             if (plexLibrary != null)
@@ -326,7 +360,7 @@ namespace MonkFixPlexDB
 
                 var howMany = (plexLibrary.MediaContainer.TotalSize / 100) + 100;
 
-                var totalSize = plexLibrary.MediaContainer.TotalSize + 100;
+                var totalSize = plexLibrary.MediaContainer.TotalSize;// + 100;
                 WriteLog("Your Plex Section " + s + " has " + totalSize + " items.");
 
                 for (int x = startingPoint + 100; x < totalSize; x += 100)
@@ -336,6 +370,11 @@ namespace MonkFixPlexDB
                     {
                         WriteLog("Getting " + x + " of " + totalSize + " items from Plex Section " + s);
                         plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, x).Result;
+
+                        if (x >= plexLibrary.MediaContainer.TotalSize)
+                        {
+                            goto configuration_timeout;
+                        }
 
                     }
                     catch (Exception plexLibEx)
@@ -356,39 +395,49 @@ namespace MonkFixPlexDB
 
                                     if (mc != null)
                                     {
-                                        foreach (var m in mc.MediaContainer.Metadata)
+                                        try
                                         {
-                                            foreach (var mm in m.Media)
+                                            if(mc.MediaContainer.Metadata != null)
                                             {
-                                                if (mm.Part.Count > 1)
+                                                foreach (var m in mc.MediaContainer.Metadata)
                                                 {
-                                                    foreach (var p in mm.Part)
+                                                    foreach (var mm in m.Media)
                                                     {
-                                                        if (p.Exists == false)
+                                                        if (mm.Part.Count > 1)
                                                         {
-                                                            doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+                                                            foreach (var p in mm.Part)
+                                                            {
+                                                                if (p.Exists == false)
+                                                                {
+                                                                    doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
 
-                                                            WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+                                                                    WriteLog(p.File.ToString() + " is unavailable and has been deleted");
 
-                                                            System.Threading.Thread.Sleep(200);
+                                                                    System.Threading.Thread.Sleep(200);
 
-                                                            doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+                                                                    doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
 
 
+                                                                }
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            var p = mm.Part.FirstOrDefault();
+
+                                                            if (string.IsNullOrEmpty(p.File.ToString()))
+                                                            {
+                                                                WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
+
+                                                            }
                                                         }
                                                     }
                                                 }
-                                                else
-                                                {
-                                                    var p = mm.Part.FirstOrDefault();
-
-                                                    if (string.IsNullOrEmpty(p.File.ToString()))
-                                                    {
-                                                        WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
-
-                                                    }
-                                                }
                                             }
+
+                                        }catch(Exception metadataEx)
+                                        {
+
                                         }
 
                                     }
@@ -419,6 +468,7 @@ namespace MonkFixPlexDB
                     }
 
 
+                    
                     System.Threading.Thread.Sleep(100);
 
                     if (configuration.Timeout > 0)
@@ -427,6 +477,15 @@ namespace MonkFixPlexDB
 
                     }
                 }
+
+            }
+
+
+        configuration_timeout:
+
+            if (configuration.Timeout > 0)
+            {
+                System.Threading.Thread.Sleep(configuration.Timeout);
 
             }
 
@@ -475,6 +534,18 @@ namespace MonkFixPlexDB
             WriteLog("Starting Point for Plex Section " + s + " Set To Item: " + startingPoint);
 
             var plexLibrary = doPlexGetLibraryEntries(s.ToString(), startingPoint).Result;
+
+            if(plexLibrary == null)
+            {
+                goto configuration_timeout;
+            }
+            else
+            {
+                if (startingPoint  > plexLibrary.MediaContainer.TotalSize)
+                {
+                    goto configuration_timeout;
+                }
+            }
 
             WriteLog("Initialization of Plex Section " + s);
 
@@ -544,7 +615,7 @@ namespace MonkFixPlexDB
 
                 var howMany = (plexLibrary.MediaContainer.TotalSize / 100) + 100;
 
-                var totalSize = plexLibrary.MediaContainer.TotalSize + 100;
+                var totalSize = plexLibrary.MediaContainer.TotalSize;
                 WriteLog("Your Plex Section " + s + " has " + totalSize + " items.");
 
                 for (int x = startingPoint + 100; x < totalSize; x += 100)
@@ -555,6 +626,11 @@ namespace MonkFixPlexDB
                         WriteLog("Getting " + x + " of " + totalSize + " items from Plex Section " + s);
 
                         plexLibrary = doPlexGetLibraryEntries(s.ToString(), x).Result;
+
+                        if(x > plexLibrary.MediaContainer.TotalSize)
+                        {
+                            goto configuration_timeout;
+                        }
 
                     }
                     catch (Exception plexLibEx)
@@ -638,6 +714,13 @@ namespace MonkFixPlexDB
 
                     }
                 }
+
+            }
+
+            configuration_timeout:
+            if (configuration.Timeout > 0)
+            {
+                System.Threading.Thread.Sleep(configuration.Timeout);
 
             }
 
