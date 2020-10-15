@@ -27,6 +27,8 @@ namespace MonkFixPlexDB
 
         public static bool Verbose = false;
 
+        public static bool Debug = false;
+
         public static bool DryRun = false;
 
         public static List<MediaPath> MediaPaths = new List<MediaPath>();
@@ -68,6 +70,10 @@ namespace MonkFixPlexDB
                        if (o.Verbose)
                        {
                            Verbose = o.Verbose;
+                       }
+                       if (o.Debug)
+                       {
+                           Debug = o.Debug;
                        }
 
                        if (!string.IsNullOrEmpty(o.ConfigFile))
@@ -220,8 +226,77 @@ namespace MonkFixPlexDB
 
 
                    });
+
         }
 
+
+        public static void doProcessItemsToDeleteFromPlexLibrary(PlexLibrary plexLibrary) {
+
+            try
+            {
+                foreach (var i in plexLibrary.MediaContainer.Metadata)
+                {
+
+                    try
+                    {
+                        var mc = getPlexMediaContainer(i.RatingKey.ToString()).Result;
+
+                        if (mc != null)
+                        {
+                            foreach (var m in mc.MediaContainer.Metadata)
+                            {
+                                foreach (var mm in m.Media)
+                                {
+                                    if (mm.Part.Count > 1)
+                                    {
+                                        foreach (var p in mm.Part)
+                                        {
+                                            WriteLog("Checking that " + p.File +" exists" );
+                                                 
+                                            if (p.Exists == false)
+                                            {
+                                                doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+
+                                                WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+
+                                                System.Threading.Thread.Sleep(200);
+
+                                                doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
+
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var p = mm.Part.FirstOrDefault();
+
+                                        if (string.IsNullOrEmpty(p.File.ToString()))
+                                        {
+                                            WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
+
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLog("ERROR:" + ex.Message.ToString());
+
+                    }
+                }
+            }
+            catch (Exception metadataEx)
+            {
+                WriteLog("ERROR:" + metadataEx.Message.ToString());
+
+            }
+
+
+        }
 
         public static void deleteFromSection(long s, string contentType = "1")
         {
@@ -238,6 +313,7 @@ namespace MonkFixPlexDB
             }
             catch (Exception ex)
             {
+                WriteLog("ERROR:" + ex.Message.ToString());
 
             }
 
@@ -274,7 +350,7 @@ namespace MonkFixPlexDB
             if(plexLibrary != null)
             {
 
-                if (startingPoint >= plexLibrary.MediaContainer.TotalSize)
+                if (startingPoint > plexLibrary.MediaContainer.TotalSize)
                 {
                     goto configuration_timeout;
                 }
@@ -285,63 +361,7 @@ namespace MonkFixPlexDB
 
             }
 
-            try
-            {
-                foreach (var i in plexLibrary.MediaContainer.Metadata)
-                {
-
-                    try
-                    {
-                        var mc = getPlexMediaContainer(i.RatingKey.ToString()).Result;
-
-                        if (mc != null)
-                        {
-                            foreach (var m in mc.MediaContainer.Metadata)
-                            {
-                                foreach (var mm in m.Media)
-                                {
-                                    if (mm.Part.Count > 1)
-                                    {
-                                        foreach (var p in mm.Part)
-                                        {
-                                            if (p.Exists == false)
-                                            {
-                                                doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
-
-                                                WriteLog(p.File.ToString() + " is unavailable and has been deleted");
-
-                                                System.Threading.Thread.Sleep(200);
-
-                                                doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
-
-
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var p = mm.Part.FirstOrDefault();
-
-                                        if (string.IsNullOrEmpty(p.File.ToString()))
-                                        {
-                                            WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
-
-                                        }
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                }
-            }catch(Exception metadataEx)
-            {
-
-            }
+            doProcessItemsToDeleteFromPlexLibrary(plexLibrary);
 
             if (plexLibrary != null)
             {
@@ -371,87 +391,18 @@ namespace MonkFixPlexDB
                         WriteLog("Getting " + x + " of " + totalSize + " items from Plex Section " + s);
                         plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, x).Result;
 
-                        if (x >= plexLibrary.MediaContainer.TotalSize)
-                        {
-                            goto configuration_timeout;
-                        }
+                       
 
                     }
                     catch (Exception plexLibEx)
                     {
+                        WriteLog("ERROR:" + plexLibEx.Message.ToString());
 
                     }
                     if (plexLibrary != null)
                     {
+                        doProcessItemsToDeleteFromPlexLibrary(plexLibrary);
 
-                        try
-                        {
-                            foreach (var i in plexLibrary.MediaContainer.Metadata)
-                            {
-
-                                try
-                                {
-                                    var mc = getPlexMediaContainer(i.RatingKey.ToString()).Result;
-
-                                    if (mc != null)
-                                    {
-                                        try
-                                        {
-                                            if(mc.MediaContainer.Metadata != null)
-                                            {
-                                                foreach (var m in mc.MediaContainer.Metadata)
-                                                {
-                                                    foreach (var mm in m.Media)
-                                                    {
-                                                        if (mm.Part.Count > 1)
-                                                        {
-                                                            foreach (var p in mm.Part)
-                                                            {
-                                                                if (p.Exists == false)
-                                                                {
-                                                                    doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
-
-                                                                    WriteLog(p.File.ToString() + " is unavailable and has been deleted");
-
-                                                                    System.Threading.Thread.Sleep(200);
-
-                                                                    doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
-
-
-                                                                }
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            var p = mm.Part.FirstOrDefault();
-
-                                                            if (string.IsNullOrEmpty(p.File.ToString()))
-                                                            {
-                                                                WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
-
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                        }catch(Exception metadataEx)
-                                        {
-
-                                        }
-
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-
-                        }
 
                     }
 
@@ -468,7 +419,6 @@ namespace MonkFixPlexDB
                     }
 
 
-                    
                     System.Threading.Thread.Sleep(100);
 
                     if (configuration.Timeout > 0)
@@ -476,7 +426,36 @@ namespace MonkFixPlexDB
                         System.Threading.Thread.Sleep(configuration.Timeout);
 
                     }
+
                 }
+
+                if(sectionProgress.lastKey < totalSize)
+                {
+                    plexLibrary = doPlexGetLibraryEntries(s.ToString(), contentType, sectionProgress.lastKey).Result;
+
+                    if (plexLibrary != null)
+                    {
+                        doProcessItemsToDeleteFromPlexLibrary(plexLibrary);
+
+                    }
+
+                    sectionProgress.lastKey = Convert.ToInt32(totalSize);
+
+                    foreach (var p in configuration.SectionProgress)
+                    {
+                        if (p.sectionId == sectionProgress.sectionId)
+                        {
+                            p.lastKey = sectionProgress.lastKey;
+                            WriteConfiguration();
+
+                        }
+                    }
+                }
+
+                WriteLog("Plex Section " + s.ToString() + " Done Processing");
+
+                if (configuration.EmptyTrash)
+                    doPlexEmptyTrashBySection(s.ToString());
 
             }
 
@@ -1961,6 +1940,9 @@ namespace MonkFixPlexDB
                         var json = response.Content.ReadAsStringAsync().Result.ToString();
                         //WriteLog(json);
 
+                        if(Debug)
+                            WriteLog(json);
+
                         var mc = Newtonsoft.Json.JsonConvert.DeserializeObject<PlexLibrary>(json);
 
                         return mc;
@@ -2039,6 +2021,8 @@ namespace MonkFixPlexDB
             //WriteLog(configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/refresh?X-Plex-Token=" + plexUser.User.AuthToken + "");
 
 
+            if(Debug)
+                WriteLog(configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/metadata/" + metadataItemId + "/refresh?includeExternalMedia=1&checkFiles=1&asyncCheckFiles=0&skipRefresh=1&X-Plex-Token=" + plexUser.User.AuthToken);
 
             using (var httpClient = new HttpClient(handler))
             {
@@ -2058,6 +2042,9 @@ namespace MonkFixPlexDB
                     request.Headers.TryAddWithoutValidation("accept-language", "en-US,en;q=0.9");
 
                     var response = httpClient.SendAsync(request).Result;
+
+                    if(Debug)
+                     WriteLog(response.Content.ReadAsStringAsync().Result.ToString());
                 }
             }
 
@@ -2375,6 +2362,8 @@ namespace MonkFixPlexDB
                 url = configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + urlPart + "?X-Plex-Token=" + plexUser.User.AuthToken + "";
 
 
+            if (Debug)
+                WriteLog("PLEX ITEM URL: " + url);
 
             using (var httpClient = new HttpClient(handler))
             {
@@ -2399,6 +2388,8 @@ namespace MonkFixPlexDB
                         request.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
 
                         var response = await httpClient.SendAsync(request);
+
+                        
                     }
 
                     catch (Exception ex)
@@ -2430,6 +2421,9 @@ namespace MonkFixPlexDB
                         request.Headers.TryAddWithoutValidation("sec-fetch-dest", "empty");
 
                         var response = httpClient.SendAsync(request).Result;
+
+                        if (Debug)
+                            WriteLog(response.Content.ReadAsStringAsync().Result.ToString());
 
                         //                //WriteLog(response.Content.ReadAsStringAsync().Result.ToString()); 
                     }

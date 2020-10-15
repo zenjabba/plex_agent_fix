@@ -8,6 +8,9 @@ namespace MonkFixPlexDB
         [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
         public bool Verbose { get; set; }
 
+        [Option('g', "deubg", Required = false, HelpText = "Set output to debug messages.")]
+        public bool Debug { get; set; }
+
         [Option('y', "dryrun", Required = false, HelpText = "Dry run don't actually perform any operations.")]
         public bool Dryrun { get; set; }
 
