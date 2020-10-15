@@ -255,13 +255,14 @@ namespace MonkFixPlexDB
                                                  
                                             if (p.Exists == false)
                                             {
-                                                doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+                                                if(!DryRun)
+                                                    doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
 
                                                 WriteLog(p.File.ToString() + " is unavailable and has been deleted");
 
                                                 System.Threading.Thread.Sleep(200);
-
-                                                doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+                                                if(!DryRun)
+                                                    doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
 
 
                                             }
