@@ -560,7 +560,6 @@ namespace MonkFixPlexDB
                                         doPlexMovieMatchItem(i.RatingKey.ToString(), WebUtility.UrlEncode(bestMatch.Guid), WebUtility.UrlEncode(bestMatch.Name), WebUtility.UrlEncode(bestMatch.Year.ToString()));
                                         System.Threading.Thread.Sleep(1000);
 
-                                        WriteLog("  https://zenjabba.digitalmonks.org/library/metadata/" + i.RatingKey.ToString() + "?checkFiles=0&includeAllConcerts=1&includeBandwidths=1&includeChapters=1&includeChildren=1&includeConcerts=1&includeExtras=1&includeFields=1&includeGeolocation=1&includeLoudnessRamps=1&includeMarkers=1&includeOnDeck=1&includePopularLeaves=1&includePreferences=1&includeRelated=1&includeRelatedCount=1&includeReviews=1&includeStations=1&X-Plex-Token=EtYC9xW_5g9Ht4sCfoac");
 
                                     }
                                 }
