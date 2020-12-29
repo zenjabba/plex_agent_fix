@@ -31,6 +31,8 @@ namespace MonkFixPlexDB
 
         public static bool DryRun = false;
 
+        public static bool ForceRestart = false;
+
         public static List<MediaPath> MediaPaths = new List<MediaPath>();
 
         private static SQLiteConnection plexDB;
@@ -53,7 +55,7 @@ namespace MonkFixPlexDB
             };
 
 
-            //Test();
+            Test();
 
 
 
@@ -74,6 +76,11 @@ namespace MonkFixPlexDB
                        if (o.Debug)
                        {
                            Debug = o.Debug;
+                       }
+
+                       if (o.ForceRestart)
+                       {
+                           ForceRestart = o.ForceRestart;
                        }
 
                        if (!string.IsNullOrEmpty(o.ConfigFile))
@@ -255,7 +262,7 @@ namespace MonkFixPlexDB
                                         {
                                             WriteLog("Checking that " + p.File + " exists");
 
-                                            if (File.Exists(p.File) == false)
+                                            if (!p.Exists)
                                             {
                                                 if (!DryRun)
                                                     doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
@@ -268,17 +275,47 @@ namespace MonkFixPlexDB
 
 
                                             }
+                                            /*if (!p.Accessible)
+                                            {
+                                                if (!DryRun)
+                                                    doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+
+                                                WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+
+                                                System.Threading.Thread.Sleep(200);
+                                                if (!DryRun)
+                                                    doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
+
+                                            }*/
                                         }
                                     }
                                     else
                                     {
                                         var p = mm.Part.FirstOrDefault();
 
-                                        if (string.IsNullOrEmpty(p.File.ToString()))
+                                        WriteLog("Checking that " + p.File + " exists");
+
+
+                                        if (!p.Exists)
+                                        {
+                                            //WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
+                                            if (!DryRun)
+                                                doPlexDeleteItem(i.RatingKey.ToString(), mm.Id.ToString());
+
+                                            WriteLog(p.File.ToString() + " is unavailable and has been deleted");
+
+                                            System.Threading.Thread.Sleep(200);
+                                            if (!DryRun)
+                                                doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
+                                        }
+                                        /*
+                                        if (!p.Accessible)
                                         {
                                             WriteLog(p.File.ToString() + " is unavailable but is only copy and HAS NOT been deleted.");
 
-                                        }
+                                        }*/
                                     }
                                 }
                             }
@@ -345,6 +382,9 @@ namespace MonkFixPlexDB
                 }
 
             }
+
+            if (ForceRestart)
+                startingPoint = 0;
 
             WriteLog("Starting Point for Plex Section " + s + " Set To Item: " + startingPoint);
 
@@ -711,6 +751,7 @@ namespace MonkFixPlexDB
         {
             Verbose = true;
             configuration = GetConfiguration();
+            DryRun = false;
 
             /*
             DBPath = configuration.PlexDatabasePath;
@@ -736,18 +777,25 @@ namespace MonkFixPlexDB
             {
                 if (!string.IsNullOrEmpty(plexUser.User.AuthToken))
                 {
-                    /*
+
+
+
+                    System.Threading.Thread.Sleep(200);
+
+                    //doPlexMetadataDeleteUnavailableFiles(m.RatingKey.ToString());
+
                     foreach (var s in configuration.SectionsToProcess)
                     {
                         deleteFromSection(s);
 
                     }
+
                     foreach (var s in configuration.EpisodeSectionsToProcess)
                     {
                         deleteFromSection(s, "4");
 
-                    }*/
-
+                    }
+                    /*
                     foreach (var s in configuration.SectionsToProcess)
                     {
                         //MatchUnmatchedMediaInPlexBySection(s.ToString());
@@ -757,7 +805,7 @@ namespace MonkFixPlexDB
                     {
                         MatchUnmatchedMediaInPlexBySectionViaAPI(s.ToString(), "2");
 
-                    }
+                    }*/
                 }
                 else
                 {
@@ -2090,7 +2138,7 @@ namespace MonkFixPlexDB
             {
                 using (var httpClient = new HttpClient(handler))
                 {
-                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/sections/" + libraryId + "/all?type=" + contentType + "&sort=addedAt%3Adesc&includeCollections=1&includeExternalMedia=1&includeAdvanced=1&includeMeta=1&X-Plex-Container-Start=" + startingNumber.ToString() + "&X-Plex-Container-Size=72&X-Plex-Product=Plex Web&X-Plex-Version=4.41.1&X-Plex-Client-Identifier=kfowlv9lv8su6i8ds01fbqdm&X-Plex-Platform=Chrome&X-Plex-Platform-Version=84.0&X-Plex-Sync-Version=2&X-Plex-Features=external-media%2Cindirect-media&X-Plex-Model=hosted&X-Plex-Device=OSX&X-Plex-Device-Name=Chrome&X-Plex-Device-Screen-Resolution=1792x881%2C1792x1120&X-Plex-Token=" + plexUser.User.AuthToken + "&X-Plex-Language=en&X-Plex-Drm=none&X-Plex-Text-Format=plain&X-Plex-Provider-Version=1.3"))
+                    using (var request = new HttpRequestMessage(new HttpMethod("GET"), configuration.PlexProtocol + "://" + configuration.PlexHost + ":" + configuration.PlexPort + "/library/sections/" + libraryId + "/all?type=" + contentType + "&sort=addedAt%3Adesc&includeCollections=1&includeExternalMedia=1&includeAdvanced=1&includeMeta=1&X-Plex-Container-Start=" + startingNumber.ToString() + "&X-Plex-Container-Size=50&X-Plex-Product=Plex Web&X-Plex-Version=4.41.1&X-Plex-Client-Identifier=kfowlv9lv8su6i8ds01fbqdm&X-Plex-Platform=Chrome&X-Plex-Platform-Version=84.0&X-Plex-Sync-Version=2&X-Plex-Features=external-media%2Cindirect-media&X-Plex-Model=hosted&X-Plex-Device=OSX&X-Plex-Device-Name=Chrome&X-Plex-Device-Screen-Resolution=1792x881%2C1792x1120&X-Plex-Token=" + plexUser.User.AuthToken + "&X-Plex-Language=en&X-Plex-Drm=none&X-Plex-Text-Format=plain&X-Plex-Provider-Version=1.3"))
                     {
                         request.Headers.TryAddWithoutValidation("authority", configuration.PlexHost);
                         request.Headers.TryAddWithoutValidation("accept", "application/json");
@@ -2554,8 +2602,7 @@ namespace MonkFixPlexDB
                         request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36");
                         request.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
 
-                        var response = await httpClient.SendAsync(request);
-
+                        var response = httpClient.SendAsync(request).Result;
 
                     }
 
@@ -2565,6 +2612,14 @@ namespace MonkFixPlexDB
                     }
                 }
             }
+
+            handler = new HttpClientHandler
+            {
+                CookieContainer = cookieJar,
+                UseCookies = true,
+                UseDefaultCredentials = false
+            };
+
             using (var httpClient = new HttpClient(handler))
             {
 
